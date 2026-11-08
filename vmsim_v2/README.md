@@ -26,8 +26,6 @@ python -m pytest -q                               # 195 tests, about 9 seconds
 
 ## The visualizer
 
-![vmsim v2 Visualizer Demo](../assets/demo.gif)
-
 Open `visualizer.html` in a browser. It works on its own with a built-in JavaScript engine. For best results
 **download the file and open it from disk** rather than inside a chat or preview pane, which may block it from
 reaching the local Python engine (browsers restrict pages from talking to `127.0.0.1`).
