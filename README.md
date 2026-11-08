@@ -17,6 +17,14 @@ A comprehensive simulation and analysis suite for Virtual Memory management and 
 
 ---
 
+## 🎬 Live Interactive Demo
+
+![Virtual Memory & Page Replacement Simulator Demo](assets/demo.gif)
+
+*Figure: Stepping through memory reference strings across 8 algorithms side-by-side, tracking real-time page faults, dirty writebacks, victim evictions, Belady's anomaly sweep, and hardware performance metrics.*
+
+---
+
 ## 📁 Repository Structure
 
 The repository is organized into two versions: **v2** (current, re-engineered) and **v1** (legacy Tkinter implementation).
