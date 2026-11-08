@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vmsim"
+version = "2.0.0"
+description = "Virtual memory and page-replacement simulator: eight policies, TLB, prefetch, EAT, CLI, local engine and HTML visualizer"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+authors = [{ name = "Ayaan Irfan" }, { name = "Muneeb Ahmed" }, { name = "Faizan Ashfaq" }]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+vmsim = "vmsim.cli:main"
+
+[tool.setuptools]
+packages = ["vmsim"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

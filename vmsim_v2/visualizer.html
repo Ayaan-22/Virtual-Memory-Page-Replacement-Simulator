@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Interactive page-replacement simulator: FIFO, LRU, OPT, Clock, Enhanced Clock, LFU, MFU and Random side by side.">
+<meta name="color-scheme" content="dark light">
+<script>
+(function(){var d=document.documentElement,pref="auto";
+try{pref=localStorage.getItem("vmsim-theme")||"auto"}catch(e){}
+if(pref!=="light"&&pref!=="dark")pref="auto";
+var light=pref==="light";
+if(pref==="auto"){try{light=matchMedia("(prefers-color-scheme: light)").matches}catch(e){}}
+d.dataset.pref=pref;d.dataset.theme=light?"light":"dark"})();
+</script>
+<meta name="theme-color" content="#090d13">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23111821'/%3E%3Crect x='7' y='8' width='18' height='4' rx='2' fill='%235ee0b8'/%3E%3Crect x='7' y='14' width='18' height='4' rx='2' fill='%23ffb347'/%3E%3Crect x='7' y='20' width='11' height='4' rx='2' fill='%23ff7a6b'/%3E%3C/svg%3E">
+<title>Page Replacement Lab</title>
+<style>
+:root,:root[data-theme=dark]{--bg:#090d13;--s1:#111821;--s2:#172130;--line:#243344;--line2:#33485e;--tx:#e8eef5;--mu:#a9b9c8;
+--hit:#5ee0b8;--flt:#ffb347;--vic:#ff7a6b;--dty:#b9a2ff;--acc:#5ee0b8;--info:#7aa2ff;
+--hit-tx:#5ee0b8;--flt-tx:#ffb347;--vic-tx:#ff9d92;--dty-tx:#d6caff;--acc-tx:#5ee0b8;--on-acc:#04211a;
+--ctl:#0d141c;--pill:#0e151e;--chip:#0c131b;--kbd:#18232f;--code:#d6e2ee;
+--btn1:#1e2c3d;--btn2:#162130;--btnh1:#243549;--btnh2:#1a2738;--go1:#76f3d0;--go2:#3fcfa5;
+--pop:#121b27;--act:#233448;--toast:#0d151f;--cmdbg:#070c12;--glass:#0b111ad9;--tip:#0a1017f2;
+--track:#243445;--meter:#0b1118;--cell1:#1f2e40;--cell2:#18232f;--ft1:#4d3c1e;--ft2:#352a1a;--ht1:#1d4c44;--ht2:#15342f;
+--vbg:#55262b;--vtx:#ffcbc4;--cap:#d0dbe5;--sub:#c6d2de;--rowline:#1d2b3a;--hov:#ffffff10;--hi:#ffffff10;--shd:#000d;
+--glow:#5ee0b8;--g1:#12383f70;--g2:#2d205870;--h1a:#fff;--h1b:#8fe9cf;--focus:#ffb347;--now:#fff;--dot:#71879b;--empty:#8da2b5;
+--bar-f:#ffb3476e;--bar-h:#5ee0b866;
+--p0:#5ad1b0;--p1:#ffb347;--p2:#ff6f61;--p3:#7aa2ff;--p4:#b79cff;--p5:#f2d45c;--p6:#8fd16b;--p7:#e58bd0;color-scheme:dark}
+:root[data-theme=light]{--bg:#f2f5f9;--s1:#ffffff;--s2:#f8fafc;--line:#d8e0e9;--line2:#b4c1cf;--tx:#0e1925;--mu:#445568;
+--hit:#16b890;--flt:#f2a31f;--vic:#e5533f;--dty:#7c5cdb;--acc:#16b890;--info:#6f99f5;
+--hit-tx:#087a5f;--flt-tx:#965600;--vic-tx:#c0392a;--dty-tx:#5b3dbf;--acc-tx:#066650;--on-acc:#04211a;
+--ctl:#ffffff;--pill:#ffffff;--chip:#ebf0f6;--kbd:#e6ecf3;--code:#0e1925;
+--btn1:#ffffff;--btn2:#edf2f7;--btnh1:#f8fbfd;--btnh2:#e3ebf3;--go1:#35d6ab;--go2:#16b890;
+--pop:#ffffff;--act:#e5edf6;--toast:#ffffff;--cmdbg:#eef3f8;--glass:#ffffffdb;--tip:#fffffff2;
+--track:#d1dae5;--meter:#e3e9f0;--cell1:#f5f8fb;--cell2:#e8eef5;--ft1:#fff1d6;--ft2:#ffe2ac;--ht1:#d8f5eb;--ht2:#bdeadb;
+--vbg:#fde0db;--vtx:#9c2a1a;--cap:#1b2a3a;--sub:#2b3c50;--rowline:#e2e8ef;--hov:#0b1d3012;--hi:#ffffffd0;--shd:#1b2b402e;
+--glow:#16b890;--g1:#c8f1e4b0;--g2:#e1d9ffb0;--h1a:#0e1925;--h1b:#087a5f;--focus:#b45309;--now:#0e1925;--dot:#8798ab;--empty:#5a6e83;
+--bar-f:#f2a31f70;--bar-h:#16b89060;
+--p0:#0ea67f;--p1:#d98200;--p2:#e5533f;--p3:#3b6fe0;--p4:#7c5cdb;--p5:#b89500;--p6:#4a9a24;--p7:#cc4499;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--tx);font:16px/1.55 ui-sans-serif,system-ui,"Segoe UI Variable","Segoe UI",Roboto,sans-serif;
+padding:30px clamp(14px,3vw,38px) 70px;max-width:1560px;margin-inline:auto;
+background:radial-gradient(900px 520px at 4% -8%,var(--g1),transparent 70%),radial-gradient(780px 500px at 100% -6%,var(--g2),transparent 70%),var(--bg);background-attachment:fixed}
+.eyebrow{font:600 13px ui-monospace,"Cascadia Code",Consolas,monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--acc-tx);margin-bottom:10px}
+h1{font-size:clamp(30px,4.2vw,46px);line-height:1.18;padding-bottom:.16em;letter-spacing:-.03em;font-weight:760;margin:0 0 4px;color:var(--h1a);
+background:linear-gradient(95deg,var(--h1a) 35%,var(--h1b));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.sub{color:var(--sub);font-size:18px;line-height:1.5;margin:2px 0 18px;max-width:58ch}
+.tips{display:flex;flex-wrap:wrap;gap:8px 10px;list-style:none;margin:0;padding:0}
+.tips li{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px 7px;background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:14.5px;color:var(--mu)}
+.tips b{color:var(--tx);font-weight:600}
+kbd{font:600 12.5px ui-monospace,"Cascadia Code",Consolas,monospace;background:var(--kbd);border:1px solid var(--line2);border-bottom-width:2px;border-radius:6px;padding:1px 7px;color:var(--tx)}
+.top{display:grid;grid-template-columns:minmax(0,1fr);gap:6px 28px;margin-bottom:18px}@media(min-width:1250px){.top{grid-template-columns:minmax(0,1fr) auto}.st{margin-top:-12px}}
+.st{display:flex;flex-direction:column;align-items:flex-start;gap:10px;align-self:start}@media(min-width:1250px){.st{align-items:flex-end}}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.seg{display:inline-flex;gap:2px;background:var(--pill);border:1px solid var(--line2);border-radius:999px;padding:3px}
+.seg button{display:inline-flex;align-items:center;gap:7px;background:transparent;border:0;border-radius:999px;padding:5px 13px;font-size:14px;color:var(--mu)}
+.seg button:hover{background:var(--hov);color:var(--tx)}
+.seg button[aria-pressed=true]{background:var(--acc);color:var(--on-acc);font-weight:600}
+.seg svg{width:15px;height:15px;flex:none}
+.pill{display:inline-flex;align-items:center;gap:9px;background:var(--pill);border:1px solid var(--line2);border-radius:999px;padding:7px 15px;font-size:14.5px;color:var(--tx)}
+button.pill{cursor:pointer}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--dot);flex:none}
+.pill.ok .dot{background:var(--hit);animation:pulse 2.4s ease-out infinite}.pill.bad .dot{background:var(--vic)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--glow) 60%,transparent)}70%,100%{box-shadow:0 0 0 9px color-mix(in srgb,var(--glow) 0%,transparent)}}
+button,input{font:inherit;color:var(--tx)}
+input,button{background:var(--ctl);border:1px solid var(--line2);border-radius:10px;padding:8px 12px;transition:border-color .15s,background .15s,transform .1s,box-shadow .2s}
+button{cursor:pointer;background:linear-gradient(180deg,var(--btn1),var(--btn2))}
+button:hover{border-color:var(--acc);background:linear-gradient(180deg,var(--btnh1),var(--btnh2))}
+button:active{transform:translateY(1px) scale(.98)}
+button.pill{background:var(--pill);padding:7px 15px}
+button.go{background:linear-gradient(180deg,var(--go1),var(--go2));color:var(--on-acc);border-color:var(--go1);font-weight:700;box-shadow:0 8px 24px -8px color-mix(in srgb,var(--glow) 67%,transparent)}
+button.go:hover{filter:brightness(1.07);background:linear-gradient(180deg,var(--go1),var(--go2));box-shadow:0 10px 30px -8px color-mix(in srgb,var(--glow) 87%,transparent)}
+input:focus{border-color:var(--acc)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+input:disabled{opacity:.5;cursor:not-allowed}
+label,.fld{display:flex;flex-direction:column;gap:5px}label,.fl{color:var(--mu);font-size:14px}
+input[type=number]{width:84px}#refs{width:100%;font:600 17px ui-monospace,"Cascadia Code",Consolas,monospace;letter-spacing:.08em}
+.bar{display:flex;flex-direction:column;gap:14px;background:linear-gradient(180deg,var(--s2),var(--s1));border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin-bottom:14px;box-shadow:inset 0 1px 0 var(--hi),0 22px 44px -26px var(--shd)}
+.bar input,.bar .sb,.bar button{height:48px}.bar input{padding-top:0;padding-bottom:0}
+.row{display:flex;flex-wrap:wrap;gap:12px 14px;align-items:flex-end}.nums{display:flex;gap:14px;align-items:flex-end}.grow{flex:1 1 340px}
+.sel{position:relative;min-width:210px}
+.sb{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;padding:8px 12px}.sb svg{flex:none;color:var(--mu)}
+.sl{position:absolute;z-index:40;top:calc(100% + 6px);left:0;min-width:100%;width:max-content;max-width:min(360px,88vw);margin:0;padding:6px;list-style:none;background:var(--pop);border:1px solid var(--line2);border-radius:14px;box-shadow:0 22px 50px -10px var(--shd);max-height:min(60vh,420px);overflow:auto}
+.sl li{padding:9px 12px;border-radius:9px;cursor:pointer;display:flex;flex-direction:column;gap:1px}.sl li b{font-weight:600}.sl li small{color:var(--mu);font-size:14px;line-height:1.35}
+.sl li.act{background:var(--act)}.sl li[aria-selected=true] b::after{content:" \2713";color:var(--hit-tx)}
+#refs[aria-invalid=true]{border-color:var(--vic);box-shadow:0 0 0 3px color-mix(in srgb,var(--vic) 18%,transparent)}
+.toasts{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:10px;align-items:center;width:min(580px,calc(100vw - 24px));pointer-events:none}
+.toast{--c:var(--info);pointer-events:auto;width:100%;display:flex;gap:13px;align-items:flex-start;padding:14px 14px 14px 15px;background:var(--toast);border:1px solid var(--line2);border-left:4px solid var(--c);border-radius:15px;box-shadow:0 26px 54px -14px var(--shd),inset 0 1px 0 var(--hi);animation:tin .34s cubic-bezier(.2,.9,.3,1.1)}
+.toast.ok{--c:var(--hit)}.toast.warn{--c:var(--flt)}.toast.err{--c:var(--vic)}.toast.out{animation:tout .2s ease-in forwards}
+.ti{flex:none;width:26px;height:26px;margin-top:1px;border-radius:50%;display:grid;place-items:center;font:800 15px ui-sans-serif,system-ui,sans-serif;color:var(--on-acc);background:var(--c)}
+.tb{flex:1;min-width:0}.tb b{display:block;font-size:15.5px;line-height:1.35}.tb p{margin:3px 0 0;color:var(--mu);font-size:14.5px;line-height:1.45}
+.cmd{display:flex;align-items:center;gap:10px;margin-top:11px;background:var(--cmdbg);border:1px solid var(--line);border-radius:11px;padding:6px 6px 6px 13px}
+.cmd code{flex:1;min-width:0;overflow-x:auto;white-space:nowrap;user-select:all;font:600 14.5px ui-monospace,"Cascadia Code",Consolas,monospace;color:var(--code)}
+.cmd button{flex:none;padding:6px 14px;font-size:14px}
+.tx{flex:none;background:transparent;border:0;color:var(--mu);font-size:24px;line-height:1;padding:0 6px 3px;border-radius:8px}.tx:hover{color:var(--tx);background:var(--hov)}
+@keyframes tin{from{opacity:0;transform:translateY(16px) scale(.97)}}@keyframes tout{to{opacity:0;transform:translateY(8px) scale(.98)}}
+.play{position:sticky;top:8px;z-index:30;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px 22px;padding:12px 16px;margin:0 0 16px;background:var(--glass);backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);border:1px solid var(--line2);border-radius:18px;box-shadow:0 18px 40px -18px var(--shd)}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+.scr{display:flex;align-items:center;gap:16px;min-width:0}.sc{position:relative;flex:1;min-width:0;height:28px}
+.heat{position:absolute;left:0;right:0;bottom:28px;height:14px;display:flex;align-items:flex-end;padding:0 11px;gap:2px}
+.heat i{flex:1 1 0;min-width:0;background:var(--flt);border-radius:3px;opacity:.22;transition:opacity .2s,background .2s}.heat i.on{opacity:.9}.heat i.now{background:var(--now);opacity:1}
+.spd{display:flex;align-items:center;gap:12px;color:var(--mu);font-size:14px}.spd input{width:130px}#spv{font:600 14px ui-monospace,"Cascadia Code",Consolas,monospace;min-width:11ch;color:var(--tx)}
+input[type=range]{-webkit-appearance:none;appearance:none;display:block;width:100%;height:28px;margin:0;padding:0;border:0;border-radius:0;background:transparent;cursor:pointer;--r:0}
+input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:99px;background:linear-gradient(90deg,var(--acc) calc(11px + (100% - 22px)*var(--r)),var(--track) 0)}
+input[type=range]::-moz-range-track{height:8px;border-radius:99px;background:var(--track)}
+input[type=range]::-moz-range-progress{height:8px;border-radius:99px;background:var(--acc)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;box-sizing:border-box;width:22px;height:22px;margin-top:-7px;border-radius:50%;background:#fff;border:5px solid var(--acc);box-shadow:0 3px 10px var(--shd),0 0 0 0 color-mix(in srgb,var(--glow) 27%,transparent);transition:box-shadow .18s,transform .12s}
+input[type=range]::-moz-range-thumb{box-sizing:border-box;width:22px;height:22px;border-radius:50%;background:#fff;border:5px solid var(--acc);box-shadow:0 3px 10px var(--shd);transition:box-shadow .18s,transform .12s}
+input[type=range]:hover::-webkit-slider-thumb{box-shadow:0 3px 10px var(--shd),0 0 0 8px color-mix(in srgb,var(--glow) 20%,transparent)}
+input[type=range]:hover::-moz-range-thumb{box-shadow:0 3px 10px var(--shd),0 0 0 8px color-mix(in srgb,var(--glow) 20%,transparent)}
+input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12);box-shadow:0 3px 10px var(--shd),0 0 0 11px color-mix(in srgb,var(--glow) 25%,transparent)}
+input[type=range]:active::-moz-range-thumb{transform:scale(1.12);box-shadow:0 3px 10px var(--shd),0 0 0 11px color-mix(in srgb,var(--glow) 25%,transparent)}
+input[type=range]:focus-visible{outline:none}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--focus)}
+input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--focus)}
+@media(max-width:1180px){.play{grid-template-columns:1fr auto;row-gap:22px}.scr{grid-column:1/-1;grid-row:2}}
+#pos{font:600 15px ui-monospace,Consolas,monospace;min-width:12ch;text-align:right;color:var(--mu)}
+.chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px}
+.chip{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:5px 14px}.chip i{width:10px;height:10px;border-radius:50%}
+.chip[aria-pressed=false]{opacity:.55;text-decoration:line-through}
+.live{display:flex;flex-wrap:wrap;gap:8px 10px;margin:0 0 16px;min-height:40px}
+.lv{display:inline-flex;gap:9px;align-items:center;background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:7px 15px;font-size:14.5px;color:var(--mu)}.lv b{color:var(--tx);font-weight:600}.lv i{width:9px;height:9px;border-radius:50%}
+#grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:30px}
+@media(min-width:1000px){#grid{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:560px){#grid{grid-template-columns:1fr}}
+.p{position:relative;background:linear-gradient(180deg,var(--s2),var(--s1));border:1px solid var(--line);border-radius:18px;padding:15px;box-shadow:inset 0 1px 0 var(--hi),0 20px 40px -26px var(--shd);transition:border-color .3s,box-shadow .5s,transform .25s}
+.p:hover{transform:translateY(-2px);border-color:var(--line2)}.p.off{display:none}
+body.done .p.best{border-color:color-mix(in srgb,var(--glow) 67%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--glow) 27%,transparent),0 0 46px -10px color-mix(in srgb,var(--glow) 47%,transparent),inset 0 1px 0 var(--hi)}
+body.done .p.best .ph b::after{content:"\2605 fewest";margin-left:10px;font:700 13px ui-sans-serif,system-ui,sans-serif;color:var(--on-acc);background:var(--hit);border-radius:999px;padding:2px 10px}
+.ph{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.ph b{font-size:19px;letter-spacing:-.01em;display:flex;align-items:center;flex-wrap:wrap}
+.pd{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:9px;background:var(--c,#888)}
+.fc{display:flex;align-items:baseline;gap:6px;color:var(--mu);font-size:14px;white-space:nowrap}.fc em{font:700 24px ui-monospace,"Cascadia Code",Consolas,monospace;color:var(--tx);font-style:normal;font-variant-numeric:tabular-nums}
+.mt{height:5px;border-radius:99px;background:var(--meter);overflow:hidden;margin:0 0 14px}.mt i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--c),color-mix(in srgb,var(--c) 55%,#fff));border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.fr{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+.c{position:relative;height:44px;display:grid;grid-template-columns:50px 1fr 62px;align-items:center;background:linear-gradient(180deg,var(--cell1),var(--cell2));border:1px solid var(--line);border-radius:11px;transition:background .25s,border-color .25s,box-shadow .3s}
+.c u{text-decoration:none;font:600 13px ui-monospace,"Cascadia Code",Consolas,monospace;color:var(--mu);padding-left:12px}
+.c.d u::after{content:" D";color:var(--dty-tx);font-weight:800}
+.c .v{text-align:center;font:700 23px ui-monospace,"Cascadia Code",Consolas,monospace;font-variant-numeric:tabular-nums}
+.c.e .v{color:var(--empty);font-weight:400}
+.c.ft{border-color:var(--flt);background:linear-gradient(180deg,var(--ft1),var(--ft2));box-shadow:0 0 24px -6px color-mix(in srgb,var(--flt) 50%,transparent)}
+.c.ht{border-color:var(--hit);background:linear-gradient(180deg,var(--ht1),var(--ht2));box-shadow:0 0 24px -6px color-mix(in srgb,var(--glow) 50%,transparent)}
+.c.pf{border-style:dashed;border-color:var(--dty)}.c.hl{outline:2px solid var(--now);outline-offset:1px}
+.c small{justify-self:end;margin-right:10px;padding:2px 8px;border-radius:7px;background:var(--vbg);color:var(--vtx);font:700 14px ui-monospace,"Cascadia Code",Consolas,monospace;animation:pop .38s cubic-bezier(.2,.9,.3,1.3)}
+@keyframes pop{from{opacity:0;transform:translateX(10px) scale(.8)}}
+.cap{min-height:3.1em;margin:0 0 12px;font-size:14.5px;line-height:1.45;color:var(--cap)}.cap em{font-style:normal;color:var(--vic-tx)}.cap .f{color:var(--flt-tx)}.cap .h{color:var(--hit-tx)}.pfx{color:var(--dty-tx)}
+.rb{display:flex;align-items:flex-end;height:26px;cursor:pointer}
+.t{flex:1 1 0;min-width:0;height:100%;border-radius:2px;opacity:.28;transition:opacity .2s}.t.f{background:var(--flt)}.t.h{background:var(--hit);height:38%}.t.on{opacity:1}
+.t.now{outline:1.5px solid var(--now);outline-offset:1px;z-index:1}.t:hover{opacity:1;outline:1px solid var(--tx);z-index:2}
+h2{font-size:22px;line-height:1.3;letter-spacing:-.01em;margin:30px 0 12px;display:flex;align-items:baseline;flex-wrap:wrap}
+h2::before{content:"";width:4px;height:20px;border-radius:2px;background:var(--acc);margin-right:12px;align-self:center}
+.by{font-size:14.5px;font-weight:400;color:var(--mu);margin-left:12px}
+.wrap{overflow-x:auto}.cw{position:relative}
+.card{max-width:1100px;background:linear-gradient(180deg,var(--s2),var(--s1));border:1px solid var(--line);border-radius:18px;padding:8px 12px;box-shadow:inset 0 1px 0 var(--hi)}
+table{border-collapse:collapse;width:100%;font-size:15px;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:9px 14px;border-bottom:1px solid var(--rowline)}th:first-child,td:first-child{text-align:left}th{color:var(--mu);font-weight:600}
+tr:last-child td{border-bottom:0}tbody tr:hover td{background:var(--hov)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+td:first-child{font-weight:600;white-space:nowrap}tr.best td:first-child{color:var(--hit-tx)}.star{color:var(--hit-tx)}
+.db{position:relative;width:150px;height:28px;margin-left:auto;border-radius:8px;background:var(--meter);overflow:hidden;display:flex;align-items:center;justify-content:flex-end;padding-right:11px;font-weight:600}.db i{position:absolute;left:0;top:0;bottom:0;border-radius:8px;background:var(--c);transition:width .5s cubic-bezier(.2,.8,.2,1)}.db span{position:relative}
+#chart{background:linear-gradient(180deg,var(--s2),var(--s1));border:1px solid var(--line);border-radius:18px;width:100%;min-width:680px;max-width:1100px;height:auto;display:block}
+#chart polyline{stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.2s cubic-bezier(.3,.7,.2,1) forwards;transition:opacity .2s,stroke-width .2s}
+@keyframes draw{to{stroke-dashoffset:0}}
+#chart.foc polyline{opacity:.14}#chart.foc polyline.on{opacity:1;stroke-width:4}
+.lg{display:flex;flex-wrap:wrap;gap:6px 8px;margin:8px 0}.lg span{display:inline-flex;align-items:center;gap:7px;padding:3px 11px;border-radius:999px;border:1px solid var(--line);font-size:14.5px;cursor:default}.lg i{width:11px;height:11px;border-radius:3px}.lg span:hover{border-color:var(--mu)}
+.tip{position:absolute;top:14px;z-index:5;pointer-events:none;background:var(--tip);border:1px solid var(--line2);border-radius:13px;padding:10px 13px;font-size:14.5px;min-width:160px;box-shadow:0 18px 40px -10px var(--shd)}
+.tip b{display:block;margin-bottom:5px}.tip div{display:flex;align-items:center;gap:8px;line-height:1.7}.tip i{width:10px;height:10px;border-radius:3px}.tip span{margin-left:auto;padding-left:18px;font:700 14.5px ui-monospace,Consolas,monospace}
+.callout{--c:var(--hit);max-width:1100px;display:flex;gap:13px;align-items:flex-start;margin:14px 0;padding:14px 16px;border:1px solid var(--line);border-left:4px solid var(--c);border-radius:14px;background:linear-gradient(180deg,var(--s2),var(--s1))}
+.callout.warn{--c:var(--flt)}.callout p{margin:0;font-size:15.5px;line-height:1.5}.callout p b{color:var(--tx)}
+.ci{flex:none;width:24px;height:24px;margin-top:1px;border-radius:50%;display:grid;place-items:center;font:800 14px ui-sans-serif,system-ui,sans-serif;color:var(--on-acc);background:var(--c)}
+.callout.ok .ci::before{content:"\2713"}.callout.warn .ci::before{content:"!"}
+.about{max-width:1100px;margin:6px 0 0;padding:18px 20px;border:1px solid var(--line);border-radius:16px;background:var(--chip)}
+.about h3{margin:0 0 12px;font-size:16px;letter-spacing:-.005em}
+.about ul{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:14px 32px}
+.about li{color:var(--mu);font-size:15px;line-height:1.5}.about li b{display:block;color:var(--tx);font-weight:600;margin-bottom:2px}
+@media(max-width:800px){.about ul{grid-template-columns:1fr}}code{font-family:ui-monospace,"Cascadia Code",Consolas,monospace;color:var(--code)}
+@media(max-width:700px){
+.play{position:static;padding:12px}.spd input{width:100px}#spv{min-width:0}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.row .sel{min-width:0}.grow,#gen,#run,.nums{grid-column:1/-1}.nums label{flex:1}input[type=number]{width:100%}
+.bar{padding:14px}.top{margin-bottom:12px}.sub{font-size:16px}.tips li{border-radius:14px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}#chart polyline{stroke-dashoffset:0}}
+</style>
+</head>
+<body>
+<main>
+<div class="top">
+  <div><div class="eyebrow">Operating Systems &middot; Virtual Memory</div><h1>Page Replacement Lab</h1>
+  <p class="sub">Eight page-replacement policies run the same reference string side by side, each with its own frames, dirty bits and TLB.</p>
+  <ul class="tips" aria-label="How to use this page">
+    <li><b>Hover</b> a page to follow it</li>
+    <li><b>Click</b> a timeline to jump</li>
+    <li><kbd>Space</kbd> play <kbd>&larr;</kbd><kbd>&rarr;</kbd> step <kbd>D</kbd> next difference</li>
+  </ul></div>
+  <div class="st">
+    <div class="pills" role="status"><span class="pill" id="sJS"><span class="dot"></span>Built-in engine &middot; checking&hellip;</span><button type="button" class="pill" id="sPy"><span class="dot"></span>Python engine &middot; checking&hellip;</button></div>
+    <div class="seg" id="theme" role="group" aria-label="Color theme">
+      <button type="button" data-t="light" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg>Light</button>
+      <button type="button" data-t="dark" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8a5.6 5.6 0 1 0 6.8 6.8z"/></svg>Dark</button>
+      <button type="button" data-t="auto" aria-pressed="true"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="5.6"/><path d="M8 2.4a5.6 5.6 0 0 1 0 11.2z" fill="currentColor"/></svg>Auto</button>
+    </div>
+  </div>
+</div>
+
+<div class="bar">
+  <div class="row">
+    <div class="fld"><span class="fl" id="wlL">Workload</span><div id="wl"></div></div>
+    <div class="fld"><span class="fl" id="wrL">Writes</span><div id="wr"></div></div>
+    <button id="gen" title="Generate a new random string for this workload">Re-roll</button>
+    <div class="fld"><span class="fl" id="engL">Engine</span><div id="eng"></div></div>
+    <div class="nums">
+      <label>Frames<input id="F" type="number" min="1" max="12" value="3"></label>
+      <label>TLB entries<input id="T" type="number" min="0" max="8" value="0"></label>
+      <label>Prefetch<input id="PF" type="number" min="0" max="4" value="0" disabled title="Needs the Python engine"></label>
+    </div>
+  </div>
+  <div class="row">
+    <label class="grow">Reference string (add w for a write, e.g. 3w)<input id="refs" type="text" spellcheck="false" autocomplete="off"></label>
+    <button id="run" class="go">Run</button>
+  </div>
+</div>
+
+
+<div class="play">
+  <div class="btns"><button id="back">&#9664;&#xFE0E; Back</button><button id="pp" class="go">&#9654;&#xFE0E; Play</button><button id="next">Step &#9654;&#xFE0E;</button><button id="rst">Reset</button><button id="nd" title="Jump to the next step where the visible policies disagree (D)">Next difference</button></div>
+  <div class="scr"><div class="sc"><div class="heat" id="heat" aria-hidden="true"></div><input id="scrub" type="range" min="0" max="0" value="0" aria-label="Position in reference string"></div><span id="pos"></span></div>
+  <div class="spd"><span>Speed</span><input id="spd" type="range" min="1" max="10" value="6" aria-label="Playback speed"><span id="spv"></span></div>
+</div>
+
+<div class="chips" id="chips" role="group" aria-label="Show or hide policies"></div>
+<div id="live" class="live"></div>
+<div id="grid"></div>
+
+<h2>Summary<span class="by" id="by"></span></h2>
+<div class="wrap card" tabindex="0" role="region" aria-label="Summary table (scrollable)"><table id="sum"></table></div>
+
+<h2>Faults vs. number of frames</h2>
+<div class="lg" id="lg"></div>
+<div class="wrap cw" tabindex="0" role="region" aria-label="Faults versus frames chart (scrollable)"><svg id="chart" viewBox="0 0 900 350" role="img" aria-label="Faults versus frames for each policy"></svg><div id="tip" class="tip" hidden></div></div>
+<div class="callout ok" id="belady" role="status"><span class="ci" aria-hidden="true"></span><p></p></div>
+<section class="about" aria-labelledby="abt">
+  <h3 id="abt">How to read these results</h3>
+  <ul>
+    <li><b>Same rules in both engines</b>The TLB is invalidated when a page is evicted, and a TLB hit never bypasses the policy.</li>
+    <li><b>Cold vs capacity faults</b>A cold fault is a page&rsquo;s first reference. Every later fault is a capacity fault.</li>
+    <li><b>Ties and randomness</b>OPT breaks ties on the smallest page number. The built-in Random uses its own seeded generator, so its numbers differ from Python&rsquo;s.</li>
+    <li><b>Python-only extras</b>Prefetch and EAT need the Python engine: run <code>python -m vmsim serve</code>, then choose it under Engine.</li>
+  </ul>
+</section>
+
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+</main>
+
+<script>
+const $=s=>document.querySelector(s);
+const NAMES=["FIFO","LRU","OPT","Clock","EClock","LFU","MFU","Random"];
+const COL=Array.from({length:8},(_,i)=>`var(--p${i})`);
+const rng=s=>()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+
+/* ---------- policies: load / hit / evict / victim, mirroring vmsim/algorithms.py ---------- */
+const clock=enh=>F=>{const s=Array(F).fill(null),r=Array(F).fill(0),m=Array(F).fill(0);let h=0,rep=false;
+  const take=j=>{h=j;rep=true;return s[j]};
+  return{hit:(p,t,w)=>{const i=s.indexOf(p);r[i]=1;if(w)m[i]=1},
+    load:(p,t,w)=>{const i=s.indexOf(null);s[i]=p;r[i]=1;m[i]=w?1:0;if(rep){h=(i+1)%F;rep=false}},
+    evict:p=>{s[s.indexOf(p)]=null},
+    victim:()=>{if(!enh){for(;;){if(r[h])r[h]=0;else return take(h);h=(h+1)%F}}
+      for(;;){const o=[...Array(F).keys()].map(i=>(h+i)%F);
+        for(const j of o)if(!r[j]&&!m[j])return take(j);
+        for(const j of o){if(!r[j]&&m[j])return take(j);r[j]=0}}}}};
+const lfu=sg=>()=>{const c=new Map();
+  return{hit:p=>c.set(p,c.get(p)+1),load:p=>c.set(p,1),evict:p=>c.delete(p),
+    victim:()=>{let b=null,bk=0;for(const[p,n]of c){const k=sg*n;if(b===null||k<bk){b=p;bk=k}}return b}}};
+const fifo=lru=>()=>{const q=[];const rm=p=>q.splice(q.indexOf(p),1);
+  return{load:p=>q.push(p),hit:p=>{if(lru){rm(p);q.push(p)}},evict:rm,victim:()=>q[0]}};
+const POL={FIFO:fifo(false),LRU:fifo(true),Clock:clock(false),EClock:clock(true),LFU:lfu(1),MFU:lfu(-1),
+  OPT:(F,R)=>{const res=[];const nu=(p,t)=>{for(let i=t+1;i<R.length;i++)if(R[i][0]===p)return i;return 1e9};
+    return{load:p=>res.push(p),hit(){},evict:p=>res.splice(res.indexOf(p),1),
+      victim:t=>res.reduce((b,p)=>{const a=nu(p,t),c=nu(b,t);return a>c||(a===c&&p<b)?p:b})}},
+  Random:(F,R,seed)=>{const res=[],r=rng(seed||7);
+    return{load:p=>res.push(p),hit(){},evict:p=>res.splice(res.indexOf(p),1),victim:()=>res[Math.floor(r()*res.length)]}}};
+
+/* ---------- simulator: one independent memory model per policy ---------- */
+function sim(refs,name,F,T){
+  const pol=POL[name](F,refs),slots=Array(F).fill(null),at=new Map(),dirty=new Map(),tlb=[],seen=new Set(),ev=[];
+  const st={hits:0,cold:0,cap:0,wb:0,th:0,tm:0,sd:0};
+  refs.forEach(([p,w],t)=>{
+    let th=null;if(T){th=tlb.includes(p);th?st.th++:st.tm++}
+    let kind,victim=null,vd=false;
+    if(at.has(p)){kind="hit";st.hits++;pol.hit(p,t,w);if(w)dirty.set(p,true)}
+    else{kind=seen.has(p)?"cap":"cold";st[kind]++;
+      if(at.size>=F){victim=pol.victim(t);slots[at.get(victim)]=null;at.delete(victim);
+        vd=!!dirty.get(victim);dirty.delete(victim);if(vd)st.wb++;
+        const i=tlb.indexOf(victim);if(i>=0){tlb.splice(i,1);st.sd++}pol.evict(victim)}
+      const s=slots.indexOf(null);slots[s]=p;at.set(p,s);dirty.set(p,!!w);pol.load(p,t,w)}
+    seen.add(p);
+    if(T){const i=tlb.indexOf(p);if(i>=0)tlb.splice(i,1);else if(tlb.length>=T)tlb.shift();tlb.push(p)}
+    ev.push({p,w,kind,victim,vd,slot:at.get(p),frames:slots.slice(),dirty:slots.map(x=>x!=null&&!!dirty.get(x))});
+  });
+  return{name,ev,st,faults:st.cold+st.cap};
+}
+
+/* ---------- workloads ---------- */
+const TEXT="7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1",BEL="1 2 3 4 1 2 5 1 2 3 4 5";
+function gen(kind,F,wr){
+  const r=rng(Date.now()&0xffff),n=60,pick=a=>a[Math.floor(r()*a.length)];let a;
+  if(kind==="textbook")a=TEXT.split(" ").map(Number);
+  else if(kind==="belady")a=BEL.split(" ").map(Number);
+  else if(kind==="loop")a=Array.from({length:n},(_,i)=>i%(F+1));
+  else if(kind==="uniform")a=Array.from({length:n},()=>Math.floor(r()*12));
+  else if(kind==="zipf"){const w=Array.from({length:16},(_,i)=>1/Math.pow(i+1,1.1)),S=w.reduce((x,y)=>x+y);
+    a=Array.from({length:n},()=>{let u=r()*S,i=0;while(u>w[i]){u-=w[i];i++}return i})}
+  else{let ws=[0,1,2,3].map(()=>Math.floor(r()*16));a=[];for(let i=0;i<n;i++){if(i&&i%20===0)ws=[0,1,2,3].map(()=>Math.floor(r()*16));a.push(r()<.9?pick(ws):Math.floor(r()*16))}}
+  return a.map(p=>r()<wr?p+"w":p).join(" ");
+}
+function parse(s){
+  const tk=s.replace(/,/g," ").trim().split(/\s+/).filter(Boolean);
+  if(!tk.length)throw Object.assign(Error("Enter at least one page number."),{input:true});
+  return tk.map(x=>{const m=/^(\d+)([rw]?)$/i.exec(x);if(!m)throw Object.assign(Error(`"${x}" is not a page number. Use whole numbers like 7 or 7w.`),{input:true});return[+m[1],m[2].toLowerCase()==="w"]});
+}
+
+/* ---------- UI state ---------- */
+function makeSelect(root,opts,value,onChange){
+  root.className="sel";const id=root.id;
+  root.innerHTML=`<button type="button" class="sb" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="${id}L ${id}V"><span id="${id}V"></span><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
+    <ul class="sl" id="${id}-l" role="listbox" aria-labelledby="${id}L" tabindex="-1" hidden>${opts.map((o,x)=>`<li role="option" id="${id}-o${x}" data-i="${x}"><b>${o.t}</b>${o.d?`<small>${o.d}</small>`:""}</li>`).join("")}</ul>`;
+  const b=root.firstElementChild,l=root.lastElementChild,lis=[...l.children];let cur=value,act=0;
+  const paint=()=>{root.querySelector(`#${id}V`).textContent=opts.find(o=>o.v===cur).t;
+    lis.forEach((li,x)=>{li.setAttribute("aria-selected",opts[x].v===cur);li.classList.toggle("act",x===act)});
+    if(!l.hidden)b.setAttribute("aria-activedescendant",lis[act].id);else b.removeAttribute("aria-activedescendant");
+    lis[act].scrollIntoView?.({block:"nearest"})};
+  const open=()=>{act=Math.max(0,opts.findIndex(o=>o.v===cur));l.hidden=false;b.setAttribute("aria-expanded","true");b.setAttribute("aria-controls",id+"-l");paint()};
+  const close=()=>{l.hidden=true;b.setAttribute("aria-expanded","false");b.removeAttribute("aria-controls");paint()};
+  const pick=x=>{const ch=opts[x].v!==cur;cur=opts[x].v;close();b.focus();if(ch&&onChange)onChange(cur)};
+  b.onclick=()=>l.hidden?open():close();
+  b.onkeydown=e=>{const o=!l.hidden,k=e.key;
+    if(k==="ArrowDown"||k==="ArrowUp"){e.preventDefault();if(!o)return open();act=(act+(k==="ArrowDown"?1:-1)+opts.length)%opts.length;paint()}
+    else if((k==="Home"||k==="End")&&o){e.preventDefault();act=k==="Home"?0:opts.length-1;paint()}
+    else if((k==="Enter"||k===" ")){e.preventDefault();o?pick(act):open()}
+    else if(k==="Escape"&&o){e.preventDefault();close()}
+    else if(k==="Tab"&&o)close();
+    else if(k.length===1&&/\w/.test(k)){const x=opts.findIndex(q=>q.t.toLowerCase().startsWith(k.toLowerCase()));if(x>=0){act=x;if(o)paint();else pick(x)}}};
+  l.onmousedown=e=>e.preventDefault();
+  l.onclick=e=>{const li=e.target.closest("li");if(li)pick(+li.dataset.i)};
+  l.onmousemove=e=>{const li=e.target.closest("li");if(li&&+li.dataset.i!==act){act=+li.dataset.i;paint()}};
+  document.addEventListener("click",e=>{if(!l.hidden&&!root.contains(e.target))close()});
+  b.onblur=()=>setTimeout(()=>{if(!root.contains(document.activeElement)&&!l.hidden)close()},0);
+  paint();
+  return{get value(){return cur},set value(v){cur=v;paint()}};
+}
+const API="http://127.0.0.1:8765",CMD="python -m vmsim serve";
+const WL=[{v:"textbook",t:"Textbook string",d:"20 references from Silberschatz"},{v:"belady",t:"Belady's anomaly",d:"FIFO faults more with 4 frames than with 3"},
+  {v:"loop",t:"Loop of frames+1 pages",d:"LRU and FIFO miss every single time"},{v:"zipf",t:"Zipf hot set",d:"A few pages receive most references"},
+  {v:"phases",t:"Shifting working set",d:"Locality that moves every 20 steps"},{v:"uniform",t:"Uniform random",d:"No locality, so the policies tie"}];
+const WR=[{v:"0",t:"0% writes",d:"Read-only"},{v:".25",t:"25% writes",d:"Some pages become dirty"},{v:".5",t:"50% writes",d:"Most evictions need a write-back"}];
+const EN=[{v:"js",t:"Built-in engine",d:"Runs in this page. No setup."},{v:"py",t:"Python engine",d:"Your vmsim package, with prefetch and EAT. Needs python -m vmsim serve."}];
+const SEL={wl:makeSelect($("#wl"),WL,"textbook",()=>newString()),wr:makeSelect($("#wr"),WR,"0",()=>newString()),
+  eng:makeSelect($("#eng"),EN,"js",engChange)};
+let py={online:false,ver:""},R=[],n=0,k=0,F=3,timer=null,usedPy=false,hlP=null,lastSt="",wasOn=false,runId=0,ft;
+const hide=new Set(),fmt=x=>(x*100).toFixed(1)+"%",clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const ST=(()=>{const r=TEXT.split(" ").map(x=>[+x,false]),g=[["FIFO",15],["LRU",12],["OPT",9]];return[g.filter(([m,f])=>sim(r,m,3,0).faults===f).length,g.length]})();
+
+/* ---------- engines ---------- */
+async function post(path,body){
+  const c=new AbortController(),to=setTimeout(()=>c.abort(),15000);let r;
+  try{r=await fetch(API+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:c.signal})}
+  catch{throw Object.assign(Error("Python engine unreachable"),{offline:true})}finally{clearTimeout(to)}
+  const j=await r.json();if(!r.ok)throw Error(j.error||"Engine error "+r.status);return j;
+}
+async function ping(){
+  if(document.hidden)return;
+  const c=new AbortController(),to=setTimeout(()=>c.abort(),1200);
+  try{const j=await(await fetch(API+"/api/health",{signal:c.signal})).json();py={online:j.ok===true,ver:j.version||""}}catch{py={online:false,ver:""}}
+  clearTimeout(to);const was=wasOn;wasOn=py.online;paintStatus();
+  if(py.online&&!was)toast({kind:"ok",title:"Python engine connected",text:SEL.eng.value==="py"?"Now in use. Prefetch and EAT are enabled.":"Choose it under Engine to enable prefetch and EAT."});
+  else if(!py.online&&was)toast({kind:"warn",title:"Python engine went offline",text:SEL.eng.value==="py"?"Using the built-in engine until it is back.":"The built-in engine is unaffected.",cmd:SEL.eng.value==="py",ms:9000});
+  if(py.online!==was&&SEL.eng.value==="py")run(true);
+}
+const ICON={info:"i",ok:"✓",warn:"!",err:"!"};
+function toast({kind="info",title,text="",cmd=false,ms=5600}){
+  const box=$("#toasts");
+  box.querySelectorAll(".toast").forEach(t=>{if(t.dataset.k===title)t.remove()});
+  while(box.children.length>=3)box.firstElementChild.remove();
+  const t=document.createElement("div");t.className="toast "+kind;t.dataset.k=title;
+  t.innerHTML=`<span class="ti" aria-hidden="true">${ICON[kind]}</span><div class="tb"><b></b><p></p>${cmd?`<div class="cmd"><code>${CMD}</code><button type="button" class="cp">Copy</button></div>`:""}</div><button type="button" class="tx" aria-label="Dismiss notification">×</button>`;
+  t.querySelector("b").textContent=title;const p=t.querySelector("p");text?p.textContent=text:p.remove();
+  let to;const close=()=>{clearTimeout(to);t.classList.add("out");setTimeout(()=>t.remove(),200)},arm=()=>{to=setTimeout(close,ms)};
+  t.querySelector(".tx").onclick=close;
+  if(cmd){const code=t.querySelector("code"),cp=t.querySelector(".cp");
+    cp.onclick=async()=>{let ok=false;
+      try{await navigator.clipboard.writeText(CMD);ok=true}catch{
+        const r=document.createRange();r.selectNodeContents(code);const g=getSelection();g.removeAllRanges();g.addRange(r);
+        try{ok=document.execCommand("copy")}catch{}}
+      cp.textContent=ok?"Copied ✓":"Selected: press Ctrl+C";clearTimeout(to);arm()}}
+  t.onmouseenter=()=>clearTimeout(to);t.onmouseleave=arm;t.onfocusin=()=>clearTimeout(to);t.onfocusout=arm;
+  box.append(t);arm();
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll("#toasts .toast").forEach(x=>x.remove())});
+function engChange(v){lastSt="";paintStatus();run(true);
+  if(v==="py")py.online?toast({kind:"ok",title:"Python engine selected",text:"Prefetch and EAT are now available."})
+    :toast({kind:"warn",title:"Python engine is offline",text:"The built-in engine is running instead. Start the server from the project folder:",cmd:true,ms:12000})}
+function paintStatus(){
+  const on=py.online,key=[ST[0],on,py.ver,SEL.eng.value].join("|");if(key===lastSt)return;lastSt=key;
+  const good=ST[0]===ST[1];
+  $("#sJS").className="pill "+(good?"ok":"bad");
+  $("#sJS").innerHTML=`<span class="dot"></span>Built-in engine · ${good?"ready":"self-test FAILED"} (${ST[0]}/${ST[1]} checks)`;
+  $("#sPy").className="pill"+(on?" ok":"");
+  $("#sPy").innerHTML=`<span class="dot"></span>Python engine · ${on?"online · v"+py.ver:"offline"}${on&&SEL.eng.value==="py"?" · in use":""}`;
+  $("#sPy").title=on?"Click to re-check the connection":"Click to copy the start command: "+CMD;
+  $("#PF").disabled=!(SEL.eng.value==="py"&&on);
+}
+const adapt=(r,name)=>{const s=r.stats;return{name,faults:s.faults,
+  st:{hits:s.hits,cold:s.cold,cap:s.capacity,wb:s.writebacks,sd:s.tlb_shootdowns,tlb:s.tlb_hit_rate,eat:s.eat_ns,pf:[s.prefetch_issued,s.prefetch_useful,s.prefetch_wasted]},
+  ev:r.events.map(e=>({p:e.page,w:e.write,kind:e.kind==="capacity"?"cap":e.kind,victim:e.victim,vd:e.victim_dirty,pf:e.prefetched,frames:e.frames,dirty:e.dirty,slot:e.frames.indexOf(e.page)}))}};
+
+/* ---------- run / build / render ---------- */
+function newString(){const kind=SEL.wl.value;if(kind==="belady")$("#F").value=3;
+  $("#refs").value=gen(kind,clamp(+$("#F").value||3,1,12),+SEL.wr.value);run(false)}
+async function run(keep){
+  const id=++runId;$("#refs").removeAttribute("aria-invalid");stop();
+  try{
+    const refs=parse($("#refs").value);F=clamp(+$("#F").value||3,1,12);const T=clamp(+$("#T").value||0,0,8);
+    if(refs.length>400)throw Object.assign(Error("Keep the string under 400 references so the timeline stays readable. Use the Python CLI for larger runs."),{input:true});
+    const usePy=SEL.eng.value==="py"&&py.online,PF=usePy?clamp(+$("#PF").value||0,0,4):0;
+    let res;
+    if(usePy){const j=await post("/api/simulate",{refs,frames:F,tlb:T,prefetch:PF});res=NAMES.map(m=>adapt(j.results[m],m))}
+    else res=NAMES.map(m=>{const r=sim(refs,m,F,T);r.st.tlb=T?r.st.th/(r.st.th+r.st.tm):null;return r});
+    let data;const xs=Array.from({length:Math.min(10,new Set(refs.map(x=>x[0])).size+1)},(_,x)=>x+1);
+    if(usePy){const j=await post("/api/sweep",{refs,frames:xs,tlb:T,prefetch:PF,policies:NAMES});data=NAMES.map(m=>j.faults[m])}
+    else data=NAMES.map(m=>xs.map(f=>sim(refs,m,f,T).faults));
+    if(id!==runId)return;
+    R=res;usedPy=usePy;n=refs.length;k=keep?Math.min(k,n):0;$("#scrub").max=n;
+    build();heat();summary();render();chart(xs,data);
+  }catch(e){
+    if(id!==runId)return;
+    if(e.offline){py={online:false,ver:""};wasOn=false;lastSt="";paintStatus();toast({kind:"warn",title:"Python engine went offline",text:"Switched to the built-in engine. Restart the server with:",cmd:true,ms:12000});return run(keep)}
+    if(e.input)$("#refs").setAttribute("aria-invalid","true");
+    toast({kind:"err",title:e.input?"Check the reference string":"Something went wrong",text:e.message,ms:8000})}
+}
+const RM=!!(window.matchMedia&&matchMedia("(prefers-reduced-motion:reduce)").matches);
+function build(){
+  const best=Math.min(...R.map(r=>r.faults));
+  $("#grid").innerHTML=R.map((r,i)=>`<section class="p${r.faults===best?" best":""}${hide.has(r.name)?" off":""}" id="pan${i}" aria-label="${r.name}" style="--c:${COL[i]}">
+    <div class="ph"><b><i class="pd"></i>${r.name}</b><span class="fc"><em id="n${i}">0</em>faults</span></div>
+    <div class="mt"><i id="m${i}"></i></div>
+    <div class="fr">${Array.from({length:F},(_,j)=>`<div class="c e" id="c${i}_${j}"><u>F${j}</u><span class="v">–</span></div>`).join("")}</div>
+    <p class="cap" id="p${i}"></p>
+    <div class="rb" style="gap:${n>80?0:1}px">${r.ev.map((e,j)=>`<i class="t ${e.kind==="hit"?"h":"f"}" data-j="${j}" title="Step ${j+1}: ${e.kind==="hit"?"hit":"fault"} on page ${e.p}"></i>`).join("")}</div></section>`).join("");
+}
+function heat(){
+  const vis=R.filter(r=>!hide.has(r.name));
+  $("#heat").style.gap=n>120?"0":n>50?"1px":"3px";
+  $("#heat").innerHTML=Array.from({length:n},(_,j)=>{const c=vis.filter(r=>r.ev[j].kind!=="hit").length;return`<i style="height:${vis.length?Math.max(10,c/vis.length*100):10}%"></i>`}).join("");
+}
+function paintSpd(){const v=+$("#spd").value,r=1000/(1100-v*100);
+  $("#spd").style.setProperty("--r",(v-1)/9);$("#spv").textContent=r.toFixed(1)+" steps/s";$("#spd").setAttribute("aria-valuetext",r.toFixed(1)+" steps per second")}
+function hl(p){document.querySelectorAll("#grid .c.hl").forEach(c=>c.classList.remove("hl"));
+  if(p!=null&&p!=="")document.querySelectorAll(`#grid .c[data-p="${p}"]`).forEach(c=>c.classList.add("hl"))}
+function live(fs){
+  const vis=R.map((r,i)=>({r,f:fs[i]})).filter(x=>!hide.has(x.r.name));
+  if(!vis.length||!k){$("#live").innerHTML=`<span class="lv">Press <b>Play</b> to watch ${R.length} policies handle the same ${n} references.</span>`;return}
+  const lo=Math.min(...vis.map(x=>x.f)),hi=Math.max(...vis.map(x=>x.f)),nm=a=>a.map(x=>x.r.name).join(", ");
+  const fl=vis.filter(x=>x.r.ev[k-1].kind!=="hit").length,pg=vis[0].r.ev[k-1].p;
+  $("#live").innerHTML=(lo===hi?`<span class="lv"><b>All level</b> ${lo} fault${lo===1?"":"s"} each</span>`
+    :`<span class="lv"><i style="background:var(--hit)"></i><b>Leading</b> ${nm(vis.filter(x=>x.f===lo))} · ${lo}</span><span class="lv"><i style="background:var(--vic)"></i><b>Trailing</b> ${nm(vis.filter(x=>x.f===hi))} · ${hi}</span>`)
+    +`<span class="lv"><b>Step ${k}</b> page ${pg} · ${fl} of ${vis.length} faulted</span>`;
+}
+function render(){
+  const GL=GLOW,mx=Math.max(...R.map(r=>r.faults),1),fs=[];
+  R.forEach((r,i)=>{
+    const e=k?r.ev[k-1]:null,fr=e?e.frames:Array(F).fill(null);
+    let f=0;for(let j=0;j<k;j++)if(r.ev[j].kind!=="hit")f++;
+    fs.push(f);$("#n"+i).textContent=f;$("#n"+i).nextSibling.nodeValue=f===1?"fault":"faults";$("#m"+i).style.width=(f/mx*100)+"%";
+    fr.forEach((p,j)=>{const c=$(`#c${i}_${j}`),hot=e&&e.slot===j;
+      c.className="c"+(p==null?" e":"")+(e&&e.dirty[j]?" d":"")+(hot?(e.kind==="hit"?" ht":" ft"):"")+(e&&e.pf&&e.pf.includes(p)?" pf":"");
+      c.dataset.p=p==null?"":p;if(c.lastElementChild.tagName==="SMALL")c.lastElementChild.remove();
+      c.children[1].textContent=p==null?"–":p;
+      if(hot&&e.victim!=null){const s=document.createElement("small");s.textContent="−"+e.victim;c.append(s)}
+      if(hot&&!RM&&c.animate)c.animate(e.kind==="hit"?[{boxShadow:`0 0 0 0 ${GL}aa`},{boxShadow:`0 0 0 14px ${GL}00`}]:[{transform:"translateY(-9px) scale(.95)",opacity:.25},{transform:"none",opacity:1}],{duration:e.kind==="hit"?560:380,easing:"cubic-bezier(.2,.8,.2,1)"})});
+    $("#p"+i).innerHTML=e?(e.kind==="hit"?`<span class="h">Hit</span> on page ${e.p}${e.w?" (write)":""}`
+      :`<span class="f">${e.kind==="cold"?"Cold fault":"Capacity fault"}</span> on page ${e.p}${e.victim!=null?`, <em>evicted ${e.victim}${e.vd?" (dirty, written back)":""}</em>`:""}`)
+      +(e.pf&&e.pf.length?`<br><span class="pfx">+ prefetched ${e.pf.join(", ")}</span>`:""):"Ready. Press Play.";
+    $("#pan"+i).querySelectorAll(".t").forEach((t,j)=>{t.classList.toggle("on",j<k);t.classList.toggle("now",j===k-1)});
+  });
+  live(fs);document.body.classList.toggle("done",k===n&&n>0);
+  hl(hlP);$("#scrub").value=k;$("#scrub").style.setProperty("--r",n?k/n:0);$("#scrub").setAttribute("aria-valuetext",`step ${k} of ${n}`);
+  document.querySelectorAll("#heat i").forEach((x,j)=>{x.classList.toggle("on",j<k);x.classList.toggle("now",j===k-1)});$("#pos").textContent=`step ${k} / ${n}`;
+  $("#pp").innerHTML=timer?"&#10074;&#10074; Pause":"&#9654;&#xFE0E; Play";
+}
+function summary(){
+  const best=Math.min(...R.map(r=>r.faults)),mx=Math.max(...R.map(r=>r.faults),1),tl=R.some(r=>r.st.tlb!=null),ea=R.some(r=>r.st.eat!=null),pf=usedPy&&R.some(r=>r.st.pf&&r.st.pf[0]>0);
+  $("#by").textContent=usedPy?"computed by the Python engine":"computed by the built-in engine";
+  $("#sum").innerHTML=`<thead><tr><th>Policy</th><th>Faults</th><th>Cold</th><th>Capacity</th><th>Hit rate</th><th>Write-backs</th>${tl?"<th>TLB hit</th><th>Shootdowns</th>":""}${ea?"<th>EAT (ms)</th>":""}${pf?"<th>Prefetch useful / issued</th>":""}</tr></thead><tbody>`
+    +R.map((r,i)=>`<tr class="${r.faults===best?"best":""}"><td><i class="pd" style="background:${COL[i]}"></i>${r.name}${r.faults===best?' <span class="star" aria-hidden="true" title="fewest faults">★</span><span class="sr"> (fewest faults)</span>':""}</td>
+      <td><div class="db"><i style="width:${r.faults/mx*72}%;--c:var(--bar-f)"></i><span>${r.faults}</span></div></td><td>${r.st.cold}</td><td>${r.st.cap}</td>
+      <td><div class="db"><i style="width:${r.st.hits/n*72}%;--c:var(--bar-h)"></i><span>${fmt(r.st.hits/n)}</span></div></td><td>${r.st.wb}</td>${tl?`<td>${fmt(r.st.tlb)}</td><td>${r.st.sd}</td>`:""}${ea?`<td>${(r.st.eat/1e6).toFixed(3)}</td>`:""}${pf?`<td>${r.st.pf[1]} / ${r.st.pf[0]}</td>`:""}</tr>`).join("")+"</tbody>";
+}
+let CH=null;
+function chart(xs,data){
+  const maxF=xs.length,top=Math.max(...data.flat(),1);
+  const X=f=>60+(f-1)*(800/Math.max(1,maxF-1)),Y=v=>280-v/top*250;CH={xs,data,X,Y};
+  let s=`<g style="stroke:var(--line);fill:var(--mu)" font-size="16">`+xs.map(f=>`<line x1="${X(f)}" x2="${X(f)}" y1="30" y2="280"/><text x="${X(f)}" y="305" text-anchor="middle" stroke="none">${f}</text>`).join("")
+    +[0,.5,1].map(q=>`<line x1="60" x2="860" y1="${Y(top*q)}" y2="${Y(top*q)}"/><text x="50" y="${Y(top*q)+5}" text-anchor="end" stroke="none">${Math.round(top*q)}</text>`).join("")
+    +`<text x="460" y="337" text-anchor="middle" stroke="none">frames</text><text x="8" y="14" stroke="none">faults</text></g>`;
+  if(xs.includes(F)){const rt=X(F)>680;s+=`<line x1="${X(F)}" x2="${X(F)}" y1="30" y2="280" style="stroke:var(--hit-tx)" stroke-dasharray="5 6" opacity=".75"/><text x="${X(F)+(rt?-8:8)}" y="268" text-anchor="${rt?"end":"start"}" style="fill:var(--hit-tx)" font-size="15">your run: ${F} frames</text>`}
+  const an=[];
+  data.forEach((d,i)=>{s+=`<polyline data-i="${i}" pathLength="1" fill="none" stroke-width="2.5" style="stroke:${COL[i]};animation-delay:${i*70}ms" points="${d.map((v,j)=>`${X(xs[j])},${Y(v)}`).join(" ")}"/>`;
+    d.forEach((v,j)=>{if(j&&v>d[j-1]){s+=`<circle cx="${X(xs[j])}" cy="${Y(v)}" r="6" fill="none" style="stroke:var(--now)" stroke-width="2"/>`;an.push(`${NAMES[i]} goes from ${d[j-1]} to ${v} faults when frames rise from ${xs[j-1]} to ${xs[j]}`)}})});
+  $("#chart").innerHTML=s+'<g id="xh"></g>';
+  $("#lg").innerHTML=NAMES.map((m,i)=>`<span data-i="${i}"><i style="background:${COL[i]}"></i>${m}</span>`).join("");
+  const bl=$("#belady");bl.className="callout "+(an.length?"warn":"ok");
+  bl.querySelector("p").innerHTML=an.length?`<b>Belady's anomaly detected</b> (circled on the chart). ${an.join("; ")}.`:`<b>No Belady anomaly on this string.</b> More frames never increased any policy's faults.`;
+}
+$("#chart").addEventListener("mousemove",e=>{if(!CH)return;
+  const r=$("#chart").getBoundingClientRect(),x=(e.clientX-r.left)/r.width*900,m=CH.xs.length,tip=$("#tip");
+  const idx=clamp(Math.round((x-60)/(800/Math.max(1,m-1))),0,m-1),f=CH.xs[idx],px=CH.X(f);
+  const rows=NAMES.map((nm,i)=>({nm,i,v:CH.data[i][idx]})).sort((a,b)=>a.v-b.v);
+  $("#xh").innerHTML=`<line x1="${px}" x2="${px}" y1="30" y2="280" style="stroke:var(--now)" opacity=".35"/>`+rows.map(o=>`<circle cx="${px}" cy="${CH.Y(o.v)}" r="6" style="fill:${COL[o.i]};stroke:var(--s1)" stroke-width="2"/>`).join("");
+  tip.innerHTML=`<b>${f} frame${f>1?"s":""}</b>`+rows.map(o=>`<div><i style="background:${COL[o.i]}"></i>${o.nm}<span>${o.v}</span></div>`).join("");
+  tip.hidden=false;const lx=px/900*r.width;tip.style.left=(lx>r.width*.6?lx-tip.offsetWidth-16:lx+16)+"px"});
+$("#chart").addEventListener("mouseleave",()=>{$("#tip").hidden=true;$("#xh").innerHTML=""});
+$("#lg").addEventListener("mouseover",e=>{const t=e.target.closest("span");if(!t)return;$("#chart").classList.add("foc");$(`#chart polyline[data-i="${t.dataset.i}"]`)?.classList.add("on")});
+$("#lg").addEventListener("mouseout",()=>{$("#chart").classList.remove("foc");document.querySelectorAll("#chart polyline.on").forEach(q=>q.classList.remove("on"))});
+
+/* ---------- interaction ---------- */
+function stop(){clearInterval(timer);timer=null}
+function play(){if(timer){stop();render();return}if(k>=n)k=0;
+  timer=setInterval(()=>{if(k>=n){stop();render();return}k++;render()},1100-$("#spd").value*100);render()}
+function nextDiff(){const vis=R.filter(r=>!hide.has(r.name));stop();
+  for(let j=k;j<n;j++)if(new Set(vis.map(r=>r.ev[j].kind==="hit")).size>1){k=j+1;render();return}
+  toast({kind:"info",title:"That was the last difference",text:"No later step where the visible policies disagree.",ms:4200})}
+$("#chips").innerHTML=`<span class="fl">Show</span>`+NAMES.map((m,i)=>`<button type="button" class="chip" aria-pressed="true" data-m="${m}"><i style="background:${COL[i]}"></i>${m}</button>`).join("");
+$("#chips").onclick=e=>{const b=e.target.closest(".chip");if(!b)return;const m=b.dataset.m,off=!hide.has(m);
+  off?hide.add(m):hide.delete(m);b.setAttribute("aria-pressed",String(!off));$("#pan"+NAMES.indexOf(m))?.classList.toggle("off",off);heat();render()};
+$("#run").onclick=()=>run(false);$("#gen").onclick=newString;
+["F","T","PF"].forEach(x=>$("#"+x).addEventListener("change",()=>run(true)));
+$("#refs").addEventListener("keydown",e=>{if(e.key==="Enter")run(false)});
+$("#next").onclick=()=>{if(k<n){k++;render()}};$("#back").onclick=()=>{if(k>0){k--;render()}};
+$("#rst").onclick=()=>{stop();k=0;render()};$("#pp").onclick=play;$("#nd").onclick=nextDiff;
+$("#scrub").oninput=e=>{k=+e.target.value;render()};
+$("#spd").oninput=()=>{paintSpd();if(timer){stop();play()}};
+$("#grid").addEventListener("click",e=>{const t=e.target.closest(".t");if(t){stop();k=+t.dataset.j+1;render()}});
+$("#grid").addEventListener("mouseover",e=>{const c=e.target.closest(".c");hlP=c?c.dataset.p:null;hl(hlP)});
+$("#grid").addEventListener("mouseleave",()=>{hlP=null;hl(null)});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)ping()});
+$("#sPy").onclick=async()=>{
+  if(!py.online)return toast({kind:"warn",title:"Python engine is offline",text:"Start the server from the project folder, then this page connects by itself:",cmd:true,ms:12000});
+  await ping();if(py.online)toast({kind:"ok",title:"Python engine is online",text:`vmsim v${py.ver} is responding on 127.0.0.1:8765.`,ms:4200})};
+document.addEventListener("keydown",e=>{const tag=e.target.tagName;
+  if(/INPUT|SELECT|TEXTAREA/.test(tag)||e.target.closest(".sel"))return;
+  if(e.key===" "){if(tag==="BUTTON")return;e.preventDefault();play()}
+  else if(e.key==="ArrowRight")$("#next").click();else if(e.key==="ArrowLeft")$("#back").click();
+  else if(e.key==="Home"){k=0;render()}else if(e.key==="End"){k=n;render()}
+  else if(e.key==="d"||e.key==="D")nextDiff()});
+let GLOW="#5ee0b8";
+const mqLight=window.matchMedia?matchMedia("(prefers-color-scheme: light)"):null;
+function applyTheme(pref,save){
+  const light=pref==="light"||(pref==="auto"&&!!mqLight&&mqLight.matches),h=document.documentElement;
+  h.dataset.pref=pref;h.dataset.theme=light?"light":"dark";
+  GLOW=getComputedStyle(h).getPropertyValue("--glow").trim()||GLOW;   // read once per theme change, not per render
+  document.querySelectorAll("#theme button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.t===pref)));
+  document.querySelector('meta[name="theme-color"]').setAttribute("content",light?"#f2f5f9":"#090d13");
+  if(save){try{localStorage.setItem("vmsim-theme",pref)}catch{}}
+}
+$("#theme").addEventListener("click",e=>{const b=e.target.closest("button");if(b)applyTheme(b.dataset.t,true)});
+if(mqLight&&mqLight.addEventListener)mqLight.addEventListener("change",()=>{if(document.documentElement.dataset.pref==="auto")applyTheme("auto",false)});
+applyTheme(document.documentElement.dataset.pref||"auto",false);
+let touched=false;["pointerdown","keydown"].forEach(t=>addEventListener(t,()=>touched=true,{once:true,capture:true}));
+paintSpd();paintStatus();$("#refs").value=TEXT;run(false).then(()=>setTimeout(()=>{if(!touched&&!RM&&k===0&&!timer)play()},900));ping();setInterval(ping,4000);
+</script>
+</body>
+</html>
